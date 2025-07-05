@@ -1,12 +1,17 @@
-const http = require("http");
-
+// importamos el modulo de express
+const express = require("express");
+//declaramos el puerto donde se levantara el servidor
 const PORT = 3000;
 
-const server = http.createServer((req, res) => {
-  res.setHeader("Content-Type", "text/html; chartset=utf-8");
-  res.end("<h1> Hola mundo Gabi Pernas </h1>");
-});
+// asi inizializamos express y podemos eccede a todas las funcionalidades que nos proporciona
+const app = express();
 
-server.listen(PORT, () => {
-  console.log(`Server running at http:localhost:${PORT}`);
+//analizamos los archivos JSON
+app.use(express.json());
+
+const users = require("./controllers/usersControllers");
+app.use("/users", users);
+
+app.listen(PORT, () => {
+  console.log(`Server running http://localhost:${PORT}`);
 });
