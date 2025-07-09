@@ -1,19 +1,26 @@
+const userModel = require("../Models/userModels");
+
 let USERS = [
   { id: 1, name: "Usuario 1", email: "usuario1@example.com" },
   { id: 2, name: "Usuario 2", email: "usuario2@example.com" },
   { id: 3, name: "Usuario 3", email: "usuario3@example.com" },
 ];
 
-const getUsers = (req, res) => {
-  res.send(USERS);
+const getUsers = async (req, res) => {
+  try {
+    const data = await userModel.find();
+    res.status(200).json({ status: "succeeded", data, error: null });
+  } catch (error) {
+    res
+      .status(500)
+      .json({ status: "failed", data: null, error: error.message });
+  }
 };
 
-const getUserById = (req, res) => {
-  // convertimos el id de la url en un entero
-  const userId = parseInt(req.params.id);
-  // buscamos en el array por el valor que queremos buscar, este caso id
-  const user = USERS.find((user) => user.id === userId);
-  res.send(USERS);
+const getUserById = async (req, res) => {
+  const userId = req.params.id;
+  const user = await userModel.findById(userId);
+  res.send(user);
 };
 
 const patchById = (req, res) => {
