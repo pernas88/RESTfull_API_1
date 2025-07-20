@@ -1,10 +1,6 @@
+const user = require("../Models/userModels");
 const userModel = require("../Models/userModels");
-
-let USERS = [
-  { id: 1, name: "Usuario 1", email: "usuario1@example.com" },
-  { id: 2, name: "Usuario 2", email: "usuario2@example.com" },
-  { id: 3, name: "Usuario 3", email: "usuario3@example.com" },
-];
+const emailService = require("../services/emailServices");
 
 const getUsers = async (req, res) => {
   try {
@@ -18,57 +14,111 @@ const getUsers = async (req, res) => {
 };
 
 const getUserById = async (req, res) => {
-  const userId = req.params.id;
-  const user = await userModel.findById(userId);
-  res.send(user);
-};
-
-const patchById = (req, res) => {
-  // Convertimos el id de la URL en un entero
-  const userId = parseInt(req.params.id);
-  const { name, email } = req.body;
-  //Buscamos en el array por el valor que queremos buscar, en este caso por id
-  const user = USERS.find((user) => user.id === userId);
-
-  if (!user) {
-    res.send("el usuario no existe");
-  }
-  if (name) {
-    user.name = req.body.name;
-  }
-
-  if (email) {
-    user.email = req.body.email;
-  }
-  res.send(user);
-};
-
-const addUser = (req, res) => {
-  const { name, email } = req.body;
-  const newIndex = USERS.length + 1;
-
-  const newUser = {
-    id: newIndex,
-    name: name,
-    email: email,
-  };
-
-  USERS.push(newUser);
-
-  res.send(newUser);
-};
-
-const deleteUser = (req, res) => {
-  const userId = parseInt(req.params.id);
-
-  const filteredUsers = USERS.filter((user) => user.id !== userId);
-
-  if (filteredUsers.length === USERS.length) {
-    res.send("El usuario no existe");
-  } else {
-    USERS = filteredUsers;
-    res.send(filteredUsers);
+  try {
+    const userId = req.params.id;
+    const user = await userModel.findById(userId);
+    res.status(200).json({ status: "succeeded", user, error: null });
+  } catch (error) {
+    res
+      .status(500)
+      .json({ status: "failed", data: null, error: error.message });
   }
 };
 
-module.exports = { getUsers, getUserById, patchById, addUser, deleteUser };
+const patchById = async (req, res) => {
+  try {
+    const userId = req.params.id;
+    const { name, email } = req.body;
+
+    const user = await userModel.findById(userId);
+
+    if (!user) {
+      return res.status(404).send("El usuario no existe");
+    }
+
+    if (name) {
+      user.name = name;
+    }
+    if (email) {
+      user.email = email;
+    }
+
+    await user.save();
+    res.status(200).json({ status: "succeeded", user, error: null });
+  } catch (error) {
+    res
+      .status(500)
+      .json({ status: "failed", data: null, error: error.message });
+  }
+};
+
+const addUser = async (req, res) => {
+  try {
+    const { name, email } = req.body;
+    const newUser = new userModel({
+      name,
+      email,
+    });
+
+    await newUser.save();
+    const subject = `Gracias por unirte ${name}`;
+    const html = `<h1> Disfruta tu subscripcion ${name} gracias por el mensaje ${email}`;
+    await emailService.sendEmail(email, subject, html);
+    res.status(201).json({ status: "succeeded", newUser, error: null });
+  } catch (error) {
+    res
+      .status(500)
+      .json({ status: "failed", data: null, error: error.message });
+  }
+};
+
+const deleteUser = async (req, res) => {
+  try {
+    const userId = req.params.id;
+    const user = await userModel.findById(userId);
+
+    if (!user) {
+      return res.status(404).send("El usuario no existe");
+    }
+
+    await userModel.findByIdAndDelete(userId);
+    res.status(200).send({ status: "succeeded", error: null });
+  } catch (error) {
+    res
+      .status(500)
+      .json({ status: "failed", data: null, error: error.message });
+  }
+};
+
+const countUsers = async (req, res) => {
+  try {
+    const count = await userModel.find().countDocuments({});
+
+    res.status(200).send({ status: "succeeded", count, error: null });
+  } catch (error) {
+    res
+      .status(500)
+      .json({ status: "failed", data: null, error: error.message });
+  }
+};
+
+const getUsersByEmail = async (req, res) => {
+  try {
+    const users = await userModel.find({ email: { $regex: /@/ } });
+    res.status(200).send({ status: "succeeded", users, error: null });
+  } catch (error) {
+    res
+      .status(500)
+      .json({ status: "failed", data: null, error: error.message });
+  }
+};
+
+module.exports = {
+  getUsers,
+  getUserById,
+  patchById,
+  addUser,
+  deleteUser,
+  countUsers,
+  getUsersByEmail,
+};
